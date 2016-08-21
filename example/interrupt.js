@@ -1,7 +1,7 @@
 var regl = require('regl')();
 var tween = require('..')(regl);
 
-var COUNT = 1000000;
+var COUNT = 30000;
 
 var count = 0;
 var getRandomPositions = function (n) {
@@ -23,7 +23,7 @@ var getRandomPositions = function (n) {
   return positions;
 }
 
-var positionBuffer = tween.buffer(getRandomPositions(COUNT), { duration: 1000 });
+var positionBuffer = tween.buffer(getRandomPositions(COUNT), { duration: 1500 });
 
 const drawParticles = tween({
   vert: `
@@ -42,7 +42,7 @@ void main() {
   if (length(gl_PointCoord.xy - 0.5) > 0.5) {
     discard;
   }
-  gl_FragColor = vec4(1.0, 0.0, 0.0, 0.4);
+  gl_FragColor = vec4(1.0, 0.0, 0.0, 0.6);
 }
 `,
 
@@ -51,7 +51,7 @@ void main() {
   },
 
   uniforms: {
-    pointSize: 3,
+    pointSize: 4,
   },
 
   count: COUNT,
@@ -62,7 +62,7 @@ void main() {
 
 setInterval(() => {
   positionBuffer.update(getRandomPositions(COUNT));
-}, 2000);
+}, 1000);
 
 regl.frame(() => {
   drawParticles();
