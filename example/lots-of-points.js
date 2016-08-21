@@ -1,7 +1,7 @@
 var regl = require('regl')();
 var tween = require('..')(regl);
 
-var COUNT = 150000;
+var COUNT = 1250000;
 
 var count = 0;
 var getRandomPositions = function (n) {
@@ -42,7 +42,7 @@ void main() {
   if (length(gl_PointCoord.xy - 0.5) > 0.5) {
     discard;
   }
-  gl_FragColor = vec4(1.0, 0.0, 0.0, 0.4);
+  gl_FragColor = vec4(1.0, 0.0, 0.0, 0.3);
 }
 `,
 
@@ -51,7 +51,7 @@ void main() {
   },
 
   uniforms: {
-    pointSize: 5
+    pointSize: 2
   },
 
   count: COUNT,
