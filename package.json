@@ -1,6 +1,6 @@
 {
   "name": "regl-tween",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Automatically tween buffer data in regl",
   "main": "index.js",
   "scripts": {
