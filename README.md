@@ -71,6 +71,11 @@ regl.frame(() => {
 
 ## API
 
+### tween(commandObject)
+
+Returns a `regl` command, modified it to support the in-shader tweening. See the
+[regl documentation](https://github.com/mikolalysenko/regl) for more info.
+
 ### tween.buffer(data, [options])
 
 Creates a new buffer with the provided data. Options are not required but
@@ -85,10 +90,16 @@ the following keys are supported:
 var tweenedBuffer = tween.buffer(myPositionArray, { duration: 500});
 ```
 
-### tween(commandObject)
+### tween.buffer.update(data)
 
-Returns a `regl` command, modified it to support the in-shader tweening. See the
-[regl documentation](https://github.com/mikolalysenko/regl) for more info.
+Updates the data on an existing buffer.
+
+#### Example
+
+```js
+var tweenedBuffer = tween.buffer(myPositionArray, { duration: 500});
+tweenedBuffer.update(newPositionArray);
+```
 
 ## TODO's / caveats
 
