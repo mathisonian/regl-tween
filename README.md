@@ -87,7 +87,7 @@ the following keys are supported:
 #### Example
 
 ```js
-var tweenedBuffer = tween.buffer(myPositionArray, { duration: 500});
+var tweenedBuffer = tween.buffer(myPositionArray, { duration: 500, ease: 'expo-in-out'});
 ```
 
 ### tween.buffer.update(data)
