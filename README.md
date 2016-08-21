@@ -3,7 +3,7 @@
 
 A helper module that wraps regl buffers and automatically provides interpolation.
 
-# Why?
+### Why?
 
 This automatically computes tweened values in the shader so it's much faster than
 doing it in the main javascript thread.
