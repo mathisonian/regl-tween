@@ -76,8 +76,8 @@ regl.frame(() => {
 Creates a new buffer with the provided data. Options are not required but
 the following keys are supported:
 
-* `duration` - animation duration in milliseconds
-* `easing` - easing type. currently only `'linear'` is supported (see TODO's)
+* `duration` - animation duration in milliseconds. Defaults to 750 milliseconds.
+* `easing` - easing type. Defaults to `quad-in-out`. Any function in https://github.com/mattdesl/eases is a valid input option. e.g. `linear`, `expo-in-out`, etc.
 
 #### Example
 
@@ -94,5 +94,4 @@ Returns a `regl` command, modified it to support the in-shader tweening. See the
 
 Things to know:
 
-* This doesn't support anything besides linear interpolation at the moment. I plan to add this soon.
 * This hangs if you interrupt an animation on a very large data set. The issue is that with the current implementation interrupted animations fall back to doing computation on the CPU and hence it ends up being slow.

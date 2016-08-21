@@ -21,7 +21,7 @@ var getRandomPositions = function (n) {
   }
   count++;
   return positions;
-}
+};
 
 var positionBuffer = tween.buffer(getRandomPositions(COUNT), { duration: 1500 });
 
@@ -47,18 +47,16 @@ void main() {
 `,
 
   attributes: {
-    position: positionBuffer,
+    position: positionBuffer
   },
 
   uniforms: {
-    pointSize: 4,
+    pointSize: 4
   },
 
   count: COUNT,
   primitive: 'points'
-})
-
-
+});
 
 setInterval(() => {
   positionBuffer.update(getRandomPositions(COUNT));
@@ -66,4 +64,4 @@ setInterval(() => {
 
 regl.frame(() => {
   drawParticles();
-})
+});
