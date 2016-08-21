@@ -22,18 +22,9 @@ var tween = require('regl-tween')(regl);
 
 var COUNT = 10000;
 
-// Helper function
-var getRandomPositions = function (n) {
-  var positions = [];
-  for (var i = 0; i < n; i++) {
-    positions.push([Math.random() * 2 - 1, Math.random() * 2 - 1]);
-  }
-  return positions;
-}
-
 // Pass in the initial data and optionally provide some customizations to
 // the interpolation function.
-var positionBuffer = tween.buffer(getRandomPositions(COUNT), { duration: 2000 });
+var positionBuffer = tween.buffer(getRandomPositions(COUNT), { duration: 1000 });
 
 // Wrap your command in tween() instead of in regl()
 // A modified regl command is returned.
