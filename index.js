@@ -190,7 +190,6 @@ module.exports = function (regl) {
     transform('attributes');
     transform('uniforms');
 
-    console.log(commandObject);
     return regl(commandObject);
   };
 
