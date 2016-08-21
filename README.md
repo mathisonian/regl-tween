@@ -6,7 +6,7 @@ A helper module that wraps regl buffers and automatically provides interpolation
 ### Why?
 
 This automatically computes tweened values in the shader so it's much faster than
-doing it in the main javascript thread.
+doing it in the main javascript thread. See it running with 1.25 million points: https://mathisonian.github.io/regl-tween/
 
 ## installation
 
