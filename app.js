@@ -22,13 +22,13 @@ var getRandomPositions = function (n) {
   }
   count++;
   return positions;
-}
+};
 
-var positionBuffer = tween.buffer(getRandomPositions(COUNT), { duration: 1000 });
+var positionBuffer = tween.buffer(getRandomPositions(COUNT), { duration: 1000, ease: 'expo-in-out' });
 
 const drawParticles = tween({
   vert: `
-precision mediump float;
+precision lowp float;
 attribute vec2 position;
 uniform float pointSize;
 
@@ -43,23 +43,21 @@ void main() {
   if (length(gl_PointCoord.xy - 0.5) > 0.5) {
     discard;
   }
-  gl_FragColor = vec4(1.0, 0.0, 0.0, 0.2);
+  gl_FragColor = vec4(1.0, 0.0, 0.0, 0.3);
 }
 `,
 
   attributes: {
-    position: positionBuffer,
+    position: positionBuffer
   },
 
   uniforms: {
-    pointSize: 2,
+    pointSize: 2
   },
 
   count: COUNT,
   primitive: 'points'
-})
-
-
+});
 
 setInterval(() => {
   positionBuffer.update(getRandomPositions(COUNT));
@@ -67,218 +65,341 @@ setInterval(() => {
 
 regl.frame(() => {
   drawParticles();
-})
+});
 
-},{"..":2,"regl":36}],2:[function(require,module,exports){
-var strip = require('strip-comments');
-var lerp = require('lerp');
+},{"..":2,"regl":69}],2:[function(require,module,exports){
+module.exports = require('./src');
 
-var namespace = '_rtb';
+},{"./src":72}],3:[function(require,module,exports){
+'use strict';
 
-var getPreviousName = function (name, type) {
-  return namespace + '_' + type + '_previous_' + name;
+function preserveCamelCase(str) {
+	var isLastCharLower = false;
+
+	for (var i = 0; i < str.length; i++) {
+		var c = str.charAt(i);
+
+		if (isLastCharLower && (/[a-zA-Z]/).test(c) && c.toUpperCase() === c) {
+			str = str.substr(0, i) + '-' + str.substr(i);
+			isLastCharLower = false;
+			i++;
+		} else {
+			isLastCharLower = (c.toLowerCase() === c);
+		}
+	}
+
+	return str;
+}
+
+module.exports = function () {
+	var str = [].map.call(arguments, function (str) {
+		return str.trim();
+	}).filter(function (str) {
+		return str.length;
+	}).join('-');
+
+	if (!str.length) {
+		return '';
+	}
+
+	if (str.length === 1) {
+		return str.toLowerCase();
+	}
+
+	if (!(/[_.\- ]+/).test(str)) {
+		if (str === str.toUpperCase()) {
+			return str.toLowerCase();
+		}
+
+		if (str[0] !== str[0].toLowerCase()) {
+			return str[0].toLowerCase() + str.slice(1);
+		}
+
+		return str;
+	}
+
+	str = preserveCamelCase(str);
+
+	return str
+	.replace(/^[_.\- ]+/, '')
+	.toLowerCase()
+	.replace(/[_.\- ]+(\w|$)/g, function (m, p1) {
+		return p1.toUpperCase();
+	});
 };
 
-var getCurrentName = function (name, type) {
-  return namespace + '_' + type + '_current_' + name;
-};
+},{}],4:[function(require,module,exports){
+function backInOut(t) {
+  var s = 1.70158 * 1.525
+  if ((t *= 2) < 1)
+    return 0.5 * (t * t * ((s + 1) * t - s))
+  return 0.5 * ((t -= 2) * t * ((s + 1) * t + s) + 2)
+}
 
-var getNextName = function (name, type) {
-  return namespace + '_' + type + '_next_' + name;
-};
+module.exports = backInOut
+},{}],5:[function(require,module,exports){
+function backIn(t) {
+  var s = 1.70158
+  return t * t * ((s + 1) * t - s)
+}
 
-var getTimeName = function (name, type) {
-  return namespace + '_' + type + '_t_' + name;
-};
+module.exports = backIn
+},{}],6:[function(require,module,exports){
+function backOut(t) {
+  var s = 1.70158
+  return --t * t * ((s + 1) * t + s) + 1
+}
 
-var transformShader = function (name, shader, type) {
-  //
-  // [X] Strip comments
-  // [X] Replace declaration with prev / next / current declarations
-  // [X] Initialize timestamp
-  // [X] Initialize current in the main() function
-  // [X] Replace all old usages with current
-  //
+module.exports = backOut
+},{}],7:[function(require,module,exports){
+var bounceOut = require('./bounce-out')
 
-  shader = strip(shader);
-  var prev = getPreviousName(name, type);
-  var next = getNextName(name, type);
-  var current = getCurrentName(name, type);
-  var t = getTimeName(name, type);
+function bounceInOut(t) {
+  return t < 0.5
+    ? 0.5 * (1.0 - bounceOut(1.0 - t * 2.0))
+    : 0.5 * bounceOut(t * 2.0 - 1.0) + 0.5
+}
 
-  // first occurence of name:
-  var re = new RegExp(';([^;]*' + name + '[^;]*;)');
-  var found = shader.match(re);
+module.exports = bounceInOut
+},{"./bounce-out":9}],8:[function(require,module,exports){
+var bounceOut = require('./bounce-out')
 
-  if (!found || found.length < 2) {
-    return shader;
-  }
+function bounceIn(t) {
+  return 1.0 - bounceOut(1.0 - t)
+}
 
-  var invocation = found[1];
-  var prevDeclare = invocation.replace(name, prev);
-  var nextDeclare = invocation.replace(name, next);
-  var currentDeclare = '\n' + invocation.replace(name, current).replace('attribute', '').replace('uniform', '').trim();
-  var timeDeclare = '\nuniform float ' + t + ';';
+module.exports = bounceIn
+},{"./bounce-out":9}],9:[function(require,module,exports){
+function bounceOut(t) {
+  var a = 4.0 / 11.0
+  var b = 8.0 / 11.0
+  var c = 9.0 / 10.0
 
-  var replaceString = prevDeclare + nextDeclare + currentDeclare + timeDeclare;
+  var ca = 4356.0 / 361.0
+  var cb = 35442.0 / 1805.0
+  var cc = 16061.0 / 1805.0
 
-  shader = shader.replace(invocation, replaceString);
+  var t2 = t * t
 
-  // add the mix() call
-  re = new RegExp('main\\s*\\(\\s*\\)\\s*{');
-  found = shader.match(re);
+  return t < a
+    ? 7.5625 * t2
+    : t < b
+      ? 9.075 * t2 - 9.9 * t + 3.4
+      : t < c
+        ? ca * t2 - cb * t + cc
+        : 10.8 * t * t - 20.52 * t + 10.72
+}
 
-  if (found && found.length) {
-    var mixString = current + ' = ' + 'mix(' + prev + ', ' + next + ', ' + t + ');';
-    shader = shader.replace(found[0], found[0] + '\n  ' + mixString);
-  }
+module.exports = bounceOut
+},{}],10:[function(require,module,exports){
+function circInOut(t) {
+  if ((t *= 2) < 1) return -0.5 * (Math.sqrt(1 - t * t) - 1)
+  return 0.5 * (Math.sqrt(1 - (t -= 2) * t) + 1)
+}
 
-  // replace all the old names
-  re = new RegExp('\\b' + name + '\\b', 'g');
-  shader = shader.replace(re, current);
+module.exports = circInOut
+},{}],11:[function(require,module,exports){
+function circIn(t) {
+  return 1.0 - Math.sqrt(1.0 - t * t)
+}
 
-  return shader;
-};
+module.exports = circIn
+},{}],12:[function(require,module,exports){
+function circOut(t) {
+  return Math.sqrt(1 - ( --t * t ))
+}
 
-var TweenBuffer = function (data, options) {
-  this.data = data;
-  this.previousData = data;
-  this.options = Object.assign({}, {
-    duration: 750,
-    ease: 'linear'
-  }, options || {});
-};
+module.exports = circOut
+},{}],13:[function(require,module,exports){
+function cubicInOut(t) {
+  return t < 0.5
+    ? 4.0 * t * t * t
+    : 0.5 * Math.pow(2.0 * t - 2.0, 3.0) + 1.0
+}
 
-module.exports = function (regl) {
-  var tween = function (commandObject) {
-    var tweenedProps = {
-      uniforms: [],
-      attributes: []
-    };
-    var buffers = {
-      uniforms: {},
-      attributes: {}
-    };
-    var tweenBuffers = {
-      uniforms: {},
-      attributes: {}
-    };
-    var timers = {
-      uniforms: {},
-      attributes: {}
-    };
-    var tweenFlags = {
-      uniforms: {},
-      attributes: {}
-    };
-    var startTimes = {
-      uniforms: {},
-      attributes: {}
-    };
+module.exports = cubicInOut
+},{}],14:[function(require,module,exports){
+function cubicIn(t) {
+  return t * t * t
+}
 
-    var tweenBufferUpdate = function (data) {
+module.exports = cubicIn
+},{}],15:[function(require,module,exports){
+function cubicOut(t) {
+  var f = t - 1.0
+  return f * f * f + 1.0
+}
 
-      var timer = timers[this.type][this.key];
+module.exports = cubicOut
+},{}],16:[function(require,module,exports){
+function elasticInOut(t) {
+  return t < 0.5
+    ? 0.5 * Math.sin(+13.0 * Math.PI/2 * 2.0 * t) * Math.pow(2.0, 10.0 * (2.0 * t - 1.0))
+    : 0.5 * Math.sin(-13.0 * Math.PI/2 * ((2.0 * t - 1.0) + 1.0)) * Math.pow(2.0, -10.0 * (2.0 * t - 1.0)) + 1.0
+}
 
-      if (timer < 1.0) {
-        var previousData = this.previousData;
-        this.previousData = this.data.map(function (d, i) {
-          return d.map(function (elt, j) {
-            return lerp(previousData[i][j], elt, timer);
-          });
-        });
-      } else {
-        this.previousData = this.data;
-      }
+module.exports = elasticInOut
+},{}],17:[function(require,module,exports){
+function elasticIn(t) {
+  return Math.sin(13.0 * t * Math.PI/2) * Math.pow(2.0, 10.0 * (t - 1.0))
+}
 
-      this.data = data;
-      buffers[this.type][this.key].previous({
-        usage: 'dynamic',
-        data: this.previousData
-      });
+module.exports = elasticIn
+},{}],18:[function(require,module,exports){
+function elasticOut(t) {
+  return Math.sin(-13.0 * (t + 1.0) * Math.PI/2) * Math.pow(2.0, -10.0 * t) + 1.0
+}
 
-      buffers[this.type][this.key].next({
-        usage: 'dynamic',
-        data: data
-      });
-      tweenFlags[this.type][this.key] = true;
-    };
+module.exports = elasticOut
+},{}],19:[function(require,module,exports){
+function expoInOut(t) {
+  return (t === 0.0 || t === 1.0)
+    ? t
+    : t < 0.5
+      ? +0.5 * Math.pow(2.0, (20.0 * t) - 10.0)
+      : -0.5 * Math.pow(2.0, 10.0 - (t * 20.0)) + 1.0
+}
 
-    var initialize = function (type) {
-      Object.keys(commandObject[type] || {}).filter(function (key) {
-        return commandObject[type][key] instanceof TweenBuffer;
-      }).map(function (key) {
-        tweenedProps[type].push(key);
-        var tweenBuffer = commandObject[type][key];
-        tweenBuffer.type = type;
-        tweenBuffer.key = key;
-        tweenBuffer.update = tweenBufferUpdate;
-        tweenBuffers[type][key] = tweenBuffer;
-        timers[type][key] = 1.0;
-        tweenFlags[type][key] = false;
-        buffers[type][key] = {
-          previous: regl.buffer({
-            usage: 'dynamic',
-            data: tweenBuffer.data
-          }),
-          next: regl.buffer({
-            usage: 'dynamic',
-            data: tweenBuffer.data
-          })
-        };
-      });
-    };
+module.exports = expoInOut
+},{}],20:[function(require,module,exports){
+function expoIn(t) {
+  return t === 0.0 ? t : Math.pow(2.0, 10.0 * (t - 1.0))
+}
 
-    initialize('attributes');
-    initialize('uniforms');
+module.exports = expoIn
+},{}],21:[function(require,module,exports){
+function expoOut(t) {
+  return t === 1.0 ? t : 1.0 - Math.pow(2.0, -10.0 * t)
+}
 
-    var transform = function (type) {
-      tweenedProps[type].forEach(function (attr) {
-        commandObject.vert = transformShader(attr, commandObject.vert || '', type);
-        delete commandObject.attributes[attr];
-        commandObject[type][getPreviousName(attr, type)] = buffers[type][attr].previous;
-        commandObject[type][getNextName(attr, type)] = buffers[type][attr].next;
-        commandObject.uniforms[getTimeName(attr, type)] = function (context, props, batchId) {
-          if (tweenFlags[type][attr]) {
-            timers[type][attr] = 0.0;
-            startTimes[type][attr] = context.time;
-          }
+module.exports = expoOut
+},{}],22:[function(require,module,exports){
+module.exports = {
+	'backInOut': require('./back-in-out'),
+	'backIn': require('./back-in'),
+	'backOut': require('./back-out'),
+	'bounceInOut': require('./bounce-in-out'),
+	'bounceIn': require('./bounce-in'),
+	'bounceOut': require('./bounce-out'),
+	'circInOut': require('./circ-in-out'),
+	'circIn': require('./circ-in'),
+	'circOut': require('./circ-out'),
+	'cubicInOut': require('./cubic-in-out'),
+	'cubicIn': require('./cubic-in'),
+	'cubicOut': require('./cubic-out'),
+	'elasticInOut': require('./elastic-in-out'),
+	'elasticIn': require('./elastic-in'),
+	'elasticOut': require('./elastic-out'),
+	'expoInOut': require('./expo-in-out'),
+	'expoIn': require('./expo-in'),
+	'expoOut': require('./expo-out'),
+	'linear': require('./linear'),
+	'quadInOut': require('./quad-in-out'),
+	'quadIn': require('./quad-in'),
+	'quadOut': require('./quad-out'),
+	'quartInOut': require('./quart-in-out'),
+	'quartIn': require('./quart-in'),
+	'quartOut': require('./quart-out'),
+	'quintInOut': require('./quint-in-out'),
+	'quintIn': require('./quint-in'),
+	'quintOut': require('./quint-out'),
+	'sineInOut': require('./sine-in-out'),
+	'sineIn': require('./sine-in'),
+	'sineOut': require('./sine-out')
+}
+},{"./back-in":5,"./back-in-out":4,"./back-out":6,"./bounce-in":8,"./bounce-in-out":7,"./bounce-out":9,"./circ-in":11,"./circ-in-out":10,"./circ-out":12,"./cubic-in":14,"./cubic-in-out":13,"./cubic-out":15,"./elastic-in":17,"./elastic-in-out":16,"./elastic-out":18,"./expo-in":20,"./expo-in-out":19,"./expo-out":21,"./linear":23,"./quad-in":25,"./quad-in-out":24,"./quad-out":26,"./quart-in":28,"./quart-in-out":27,"./quart-out":29,"./quint-in":31,"./quint-in-out":30,"./quint-out":32,"./sine-in":34,"./sine-in-out":33,"./sine-out":35}],23:[function(require,module,exports){
+function linear(t) {
+  return t
+}
 
-          // we go up to maxT to allow for some random delays
-          var duration = tweenBuffers[type][attr].options.duration;
-          var startTime = startTimes[type][attr];
-          var t = timers[type][attr];
-          if (t < 1.0) {
-            t = Math.min(1.0, 1000 * (context.time - startTime) / duration);
-          }
+module.exports = linear
+},{}],24:[function(require,module,exports){
+function quadInOut(t) {
+    t /= 0.5
+    if (t < 1) return 0.5*t*t
+    t--
+    return -0.5 * (t*(t-2) - 1)
+}
 
-          timers[type][attr] = t;
-          tweenFlags[type][attr] = false;
-          return t;
-        };
-      });
-    };
+module.exports = quadInOut
+},{}],25:[function(require,module,exports){
+function quadIn(t) {
+  return t * t
+}
 
-    transform('attributes');
-    transform('uniforms');
+module.exports = quadIn
+},{}],26:[function(require,module,exports){
+function quadOut(t) {
+  return -t * (t - 2.0)
+}
 
-    console.log(commandObject);
-    return regl(commandObject);
-  };
+module.exports = quadOut
+},{}],27:[function(require,module,exports){
+function quarticInOut(t) {
+  return t < 0.5
+    ? +8.0 * Math.pow(t, 4.0)
+    : -8.0 * Math.pow(t - 1.0, 4.0) + 1.0
+}
 
-  tween.buffer = function (data, options) {
-    return new TweenBuffer(data, options);
-  };
+module.exports = quarticInOut
+},{}],28:[function(require,module,exports){
+function quarticIn(t) {
+  return Math.pow(t, 4.0)
+}
 
-  return tween;
-};
+module.exports = quarticIn
+},{}],29:[function(require,module,exports){
+function quarticOut(t) {
+  return Math.pow(t - 1.0, 3.0) * (1.0 - t) + 1.0
+}
 
-},{"lerp":3,"strip-comments":37}],3:[function(require,module,exports){
+module.exports = quarticOut
+},{}],30:[function(require,module,exports){
+function qinticInOut(t) {
+    if ( ( t *= 2 ) < 1 ) return 0.5 * t * t * t * t * t
+    return 0.5 * ( ( t -= 2 ) * t * t * t * t + 2 )
+}
+
+module.exports = qinticInOut
+},{}],31:[function(require,module,exports){
+function qinticIn(t) {
+  return t * t * t * t * t
+}
+
+module.exports = qinticIn
+},{}],32:[function(require,module,exports){
+function qinticOut(t) {
+  return --t * t * t * t * t + 1
+}
+
+module.exports = qinticOut
+},{}],33:[function(require,module,exports){
+function sineInOut(t) {
+  return -0.5 * (Math.cos(Math.PI*t) - 1)
+}
+
+module.exports = sineInOut
+},{}],34:[function(require,module,exports){
+function sineIn (t) {
+  var v = Math.cos(t * Math.PI * 0.5)
+  if (Math.abs(v) < 1e-14) return 1
+  else return 1 - v
+}
+
+module.exports = sineIn
+
+},{}],35:[function(require,module,exports){
+function sineOut(t) {
+  return Math.sin(t * Math.PI/2)
+}
+
+module.exports = sineOut
+},{}],36:[function(require,module,exports){
 function lerp(v0, v1, t) {
     return v0*(1-t)+v1*t
 }
 module.exports = lerp
-},{}],4:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 var GL_FLOAT = 5126
 
 function AttributeRecord () {
@@ -317,7 +438,7 @@ module.exports = function wrapAttributeState (
   }
 }
 
-},{}],5:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 var check = require('./util/check')
 var isTypedArray = require('./util/is-typed-array')
 var isNDArrayLike = require('./util/is-ndarray')
@@ -726,7 +847,7 @@ module.exports = function wrapBufferState (gl, stats, config) {
   }
 }
 
-},{"./constants/arraytypes.json":6,"./constants/dtypes.json":7,"./constants/usage.json":9,"./util/check":23,"./util/is-ndarray":28,"./util/is-typed-array":29,"./util/pool":31,"./util/values":34}],6:[function(require,module,exports){
+},{"./constants/arraytypes.json":39,"./constants/dtypes.json":40,"./constants/usage.json":42,"./util/check":56,"./util/is-ndarray":61,"./util/is-typed-array":62,"./util/pool":64,"./util/values":67}],39:[function(require,module,exports){
 module.exports={
   "[object Int8Array]": 5120
 , "[object Int16Array]": 5122
@@ -740,7 +861,7 @@ module.exports={
 , "[object ArrayBuffer]": 5121
 }
 
-},{}],7:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 module.exports={
   "int8": 5120
 , "int16": 5122
@@ -752,7 +873,7 @@ module.exports={
 , "float32": 5126
 }
 
-},{}],8:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 module.exports={
   "points": 0,
   "point": 0,
@@ -766,14 +887,14 @@ module.exports={
   "triangle fan": 6
 }
 
-},{}],9:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 module.exports={
   "static": 35044,
   "dynamic": 35048,
   "stream": 35040
 }
 
-},{}],10:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 var check = require('./util/check')
 var createEnvironment = require('./util/codegen')
 var loop = require('./util/loop')
@@ -4156,7 +4277,7 @@ module.exports = function reglCore (
   }
 }
 
-},{"./constants/dtypes.json":7,"./constants/primitives.json":8,"./dynamic":11,"./util/check":23,"./util/codegen":25,"./util/is-array-like":27,"./util/is-ndarray":28,"./util/is-typed-array":29,"./util/loop":30}],11:[function(require,module,exports){
+},{"./constants/dtypes.json":40,"./constants/primitives.json":41,"./dynamic":44,"./util/check":56,"./util/codegen":58,"./util/is-array-like":60,"./util/is-ndarray":61,"./util/is-typed-array":62,"./util/loop":63}],44:[function(require,module,exports){
 var VARIABLE_COUNTER = 0
 
 var DYN_FUNC = 0
@@ -4234,7 +4355,7 @@ module.exports = {
   accessor: toAccessorString
 }
 
-},{}],12:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 var check = require('./util/check')
 var isTypedArray = require('./util/is-typed-array')
 var isNDArrayLike = require('./util/is-ndarray')
@@ -4518,7 +4639,7 @@ module.exports = function wrapElementsState (gl, extensions, bufferState, stats)
   }
 }
 
-},{"./constants/primitives.json":8,"./constants/usage.json":9,"./util/check":23,"./util/is-ndarray":28,"./util/is-typed-array":29,"./util/values":34}],13:[function(require,module,exports){
+},{"./constants/primitives.json":41,"./constants/usage.json":42,"./util/check":56,"./util/is-ndarray":61,"./util/is-typed-array":62,"./util/values":67}],46:[function(require,module,exports){
 var check = require('./util/check')
 
 module.exports = function createExtensionCache (gl, config) {
@@ -4557,7 +4678,7 @@ module.exports = function createExtensionCache (gl, config) {
   }
 }
 
-},{"./util/check":23}],14:[function(require,module,exports){
+},{"./util/check":56}],47:[function(require,module,exports){
 var check = require('./util/check')
 var values = require('./util/values')
 var extend = require('./util/extend')
@@ -5447,7 +5568,7 @@ module.exports = function wrapFBOState (
   })
 }
 
-},{"./util/check":23,"./util/extend":26,"./util/values":34}],15:[function(require,module,exports){
+},{"./util/check":56,"./util/extend":59,"./util/values":67}],48:[function(require,module,exports){
 var GL_SUBPIXEL_BITS = 0x0D50
 var GL_RED_BITS = 0x0D52
 var GL_GREEN_BITS = 0x0D53
@@ -5541,7 +5662,7 @@ module.exports = function (gl, extensions) {
   }
 }
 
-},{}],16:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 var check = require('./util/check')
 var isTypedArray = require('./util/is-typed-array')
 
@@ -5655,7 +5776,7 @@ module.exports = function wrapReadPixels (
   return readPixels
 }
 
-},{"./util/check":23,"./util/is-typed-array":29}],17:[function(require,module,exports){
+},{"./util/check":56,"./util/is-typed-array":62}],50:[function(require,module,exports){
 var check = require('./util/check')
 var values = require('./util/values')
 
@@ -5897,7 +6018,7 @@ module.exports = function (gl, extensions, limits, stats, config) {
   }
 }
 
-},{"./util/check":23,"./util/values":34}],18:[function(require,module,exports){
+},{"./util/check":56,"./util/values":67}],51:[function(require,module,exports){
 var check = require('./util/check')
 var values = require('./util/values')
 
@@ -6118,7 +6239,7 @@ module.exports = function wrapShaderState (gl, stringStore, stats, config) {
   }
 }
 
-},{"./util/check":23,"./util/values":34}],19:[function(require,module,exports){
+},{"./util/check":56,"./util/values":67}],52:[function(require,module,exports){
 
 module.exports = function stats () {
   return {
@@ -6134,7 +6255,7 @@ module.exports = function stats () {
   }
 }
 
-},{}],20:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 module.exports = function createStringStore () {
   var stringIds = {'': 0}
   var stringValues = ['']
@@ -6155,7 +6276,7 @@ module.exports = function createStringStore () {
   }
 }
 
-},{}],21:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 var check = require('./util/check')
 var extend = require('./util/extend')
 var values = require('./util/values')
@@ -7750,7 +7871,7 @@ module.exports = function createTextureSet (
   }
 }
 
-},{"./constants/arraytypes.json":6,"./util/check":23,"./util/extend":26,"./util/is-array-like":27,"./util/is-ndarray":28,"./util/is-typed-array":29,"./util/pool":31,"./util/to-half-float":33,"./util/values":34}],22:[function(require,module,exports){
+},{"./constants/arraytypes.json":39,"./util/check":56,"./util/extend":59,"./util/is-array-like":60,"./util/is-ndarray":61,"./util/is-typed-array":62,"./util/pool":64,"./util/to-half-float":66,"./util/values":67}],55:[function(require,module,exports){
 var GL_QUERY_RESULT_EXT = 0x8866
 var GL_QUERY_RESULT_AVAILABLE_EXT = 0x8867
 var GL_TIME_ELAPSED_EXT = 0x88BF
@@ -7890,7 +8011,7 @@ module.exports = function (gl, extensions) {
   }
 }
 
-},{}],23:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 // Error checking and parameter validation.
 //
 // Statements for the form `check.someProcedure(...)` get removed by
@@ -8530,14 +8651,14 @@ module.exports = extend(check, {
   textureCube: checkTextureCube
 })
 
-},{"./extend":26,"./is-typed-array":29}],24:[function(require,module,exports){
+},{"./extend":59,"./is-typed-array":62}],57:[function(require,module,exports){
 /* globals performance */
 module.exports =
   (typeof performance !== 'undefined' && performance.now)
   ? function () { return performance.now() }
   : function () { return +(new Date()) }
 
-},{}],25:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 var extend = require('./extend')
 
 function slice (x) {
@@ -8721,7 +8842,7 @@ module.exports = function createEnvironment () {
   }
 }
 
-},{"./extend":26}],26:[function(require,module,exports){
+},{"./extend":59}],59:[function(require,module,exports){
 module.exports = function (base, opts) {
   var keys = Object.keys(opts)
   for (var i = 0; i < keys.length; ++i) {
@@ -8730,13 +8851,13 @@ module.exports = function (base, opts) {
   return base
 }
 
-},{}],27:[function(require,module,exports){
+},{}],60:[function(require,module,exports){
 var isTypedArray = require('./is-typed-array')
 module.exports = function isArrayLike (s) {
   return Array.isArray(s) || isTypedArray(s)
 }
 
-},{"./is-typed-array":29}],28:[function(require,module,exports){
+},{"./is-typed-array":62}],61:[function(require,module,exports){
 var isTypedArray = require('./is-typed-array')
 
 module.exports = function isNDArrayLike (obj) {
@@ -8751,13 +8872,13 @@ module.exports = function isNDArrayLike (obj) {
       isTypedArray(obj.data)))
 }
 
-},{"./is-typed-array":29}],29:[function(require,module,exports){
+},{"./is-typed-array":62}],62:[function(require,module,exports){
 var dtypes = require('../constants/arraytypes.json')
 module.exports = function (x) {
   return Object.prototype.toString.call(x) in dtypes
 }
 
-},{"../constants/arraytypes.json":6}],30:[function(require,module,exports){
+},{"../constants/arraytypes.json":39}],63:[function(require,module,exports){
 module.exports = function loop (n, f) {
   var result = Array(n)
   for (var i = 0; i < n; ++i) {
@@ -8766,7 +8887,7 @@ module.exports = function loop (n, f) {
   return result
 }
 
-},{}],31:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 var loop = require('./loop')
 
 var GL_BYTE = 5120
@@ -8860,7 +8981,7 @@ module.exports = {
   freeType: freeType
 }
 
-},{"./loop":30}],32:[function(require,module,exports){
+},{"./loop":63}],65:[function(require,module,exports){
 /* globals requestAnimationFrame, cancelAnimationFrame */
 if (typeof requestAnimationFrame === 'function' &&
     typeof cancelAnimationFrame === 'function') {
@@ -8877,7 +8998,7 @@ if (typeof requestAnimationFrame === 'function' &&
   }
 }
 
-},{}],33:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 var pool = require('./pool')
 
 var FLOAT = new Float32Array(1)
@@ -8923,12 +9044,12 @@ module.exports = function convertToHalfFloat (array) {
   return ushorts
 }
 
-},{"./pool":31}],34:[function(require,module,exports){
+},{"./pool":64}],67:[function(require,module,exports){
 module.exports = function (obj) {
   return Object.keys(obj).map(function (key) { return obj[key] })
 }
 
-},{}],35:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 // Context and canvas creation helper functions
 var check = require('./util/check')
 var extend = require('./util/extend')
@@ -9134,7 +9255,7 @@ module.exports = function parseArgs (args_) {
   }
 }
 
-},{"./util/check":23,"./util/extend":26}],36:[function(require,module,exports){
+},{"./util/check":56,"./util/extend":59}],69:[function(require,module,exports){
 var check = require('./lib/util/check')
 var extend = require('./lib/util/extend')
 var dynamic = require('./lib/dynamic')
@@ -9712,7 +9833,7 @@ module.exports = function wrapREGL (args) {
   return regl
 }
 
-},{"./lib/attribute":4,"./lib/buffer":5,"./lib/core":10,"./lib/dynamic":11,"./lib/elements":12,"./lib/extension":13,"./lib/framebuffer":14,"./lib/limits":15,"./lib/read":16,"./lib/renderbuffer":17,"./lib/shader":18,"./lib/stats":19,"./lib/strings":20,"./lib/texture":21,"./lib/timer":22,"./lib/util/check":23,"./lib/util/clock":24,"./lib/util/extend":26,"./lib/util/raf":32,"./lib/webgl":35}],37:[function(require,module,exports){
+},{"./lib/attribute":37,"./lib/buffer":38,"./lib/core":43,"./lib/dynamic":44,"./lib/elements":45,"./lib/extension":46,"./lib/framebuffer":47,"./lib/limits":48,"./lib/read":49,"./lib/renderbuffer":50,"./lib/shader":51,"./lib/stats":52,"./lib/strings":53,"./lib/texture":54,"./lib/timer":55,"./lib/util/check":56,"./lib/util/clock":57,"./lib/util/extend":59,"./lib/util/raf":65,"./lib/webgl":68}],70:[function(require,module,exports){
 /*!
  * strip-comments <https://github.com/jonschlinkert/strip-comments>
  *
@@ -9783,4 +9904,262 @@ strip.line = function(str, opts) {
  */
 
 module.exports = strip;
-},{}]},{},[1]);
+},{}],71:[function(require,module,exports){
+
+var camelCase = require('camelcase');
+var eases = require('eases');
+
+var glslEasings = "#define GLSLIFY 1\n#ifndef PI\n#define PI 3.141592653589793\n#endif\n\nfloat backOut_1(float t) {\n  float f = t < 0.5\n    ? 2.0 * t\n    : 1.0 - (2.0 * t - 1.0);\n\n  float g = pow(f, 3.0) - f * sin(f * PI);\n\n  return t < 0.5\n    ? 0.5 * g\n    : 0.5 * (1.0 - g) + 0.5;\n}\n\n#ifndef PI\n#define PI 3.141592653589793\n#endif\n\nfloat backIn(float t) {\n  return pow(t, 3.0) - t * sin(t * PI);\n}\n\n#ifndef PI\n#define PI 3.141592653589793\n#endif\n\nfloat backOut_0(float t) {\n  float f = 1.0 - t;\n  return 1.0 - (pow(f, 3.0) - f * sin(f * PI));\n}\n\n#ifndef PI\n#define PI 3.141592653589793\n#endif\n\nfloat bounceOut(float t) {\n  const float a = 4.0 / 11.0;\n  const float b = 8.0 / 11.0;\n  const float c = 9.0 / 10.0;\n\n  const float ca = 4356.0 / 361.0;\n  const float cb = 35442.0 / 1805.0;\n  const float cc = 16061.0 / 1805.0;\n\n  float t2 = t * t;\n\n  return t < a\n    ? 7.5625 * t2\n    : t < b\n      ? 9.075 * t2 - 9.9 * t + 3.4\n      : t < c\n        ? ca * t2 - cb * t + cc\n        : 10.8 * t * t - 20.52 * t + 10.72;\n}\n\nfloat bounceInOut(float t) {\n  return t < 0.5\n    ? 0.5 * (1.0 - bounceOut(1.0 - t * 2.0))\n    : 0.5 * bounceOut(t * 2.0 - 1.0) + 0.5;\n}\n\nfloat bounceIn(float t) {\n  return 1.0 - bounceOut(1.0 - t);\n}\n\nfloat circularInOut(float t) {\n  return t < 0.5\n    ? 0.5 * (1.0 - sqrt(1.0 - 4.0 * t * t))\n    : 0.5 * (sqrt((3.0 - 2.0 * t) * (2.0 * t - 1.0)) + 1.0);\n}\n\nfloat circularIn(float t) {\n  return 1.0 - sqrt(1.0 - t * t);\n}\n\nfloat circularOut(float t) {\n  return sqrt((2.0 - t) * t);\n}\n\nfloat cubicInOut(float t) {\n  return t < 0.5\n    ? 4.0 * t * t * t\n    : 0.5 * pow(2.0 * t - 2.0, 3.0) + 1.0;\n}\n\nfloat cubicIn(float t) {\n  return t * t * t;\n}\n\nfloat cubicOut(float t) {\n  float f = t - 1.0;\n  return f * f * f + 1.0;\n}\n\n#ifndef HALF_PI\n#define HALF_PI 1.5707963267948966\n#endif\n\nfloat elasticInOut(float t) {\n  return t < 0.5\n    ? 0.5 * sin(+13.0 * HALF_PI * 2.0 * t) * pow(2.0, 10.0 * (2.0 * t - 1.0))\n    : 0.5 * sin(-13.0 * HALF_PI * ((2.0 * t - 1.0) + 1.0)) * pow(2.0, -10.0 * (2.0 * t - 1.0)) + 1.0;\n}\n\n#ifndef HALF_PI\n#define HALF_PI 1.5707963267948966\n#endif\n\nfloat elasticIn(float t) {\n  return sin(13.0 * t * HALF_PI) * pow(2.0, 10.0 * (t - 1.0));\n}\n\n#ifndef HALF_PI\n#define HALF_PI 1.5707963267948966\n#endif\n\nfloat elasticOut(float t) {\n  return sin(-13.0 * (t + 1.0) * HALF_PI) * pow(2.0, -10.0 * t) + 1.0;\n}\n\nfloat exponentialInOut(float t) {\n  return t == 0.0 || t == 1.0\n    ? t\n    : t < 0.5\n      ? +0.5 * pow(2.0, (20.0 * t) - 10.0)\n      : -0.5 * pow(2.0, 10.0 - (t * 20.0)) + 1.0;\n}\n\nfloat exponentialIn(float t) {\n  return t == 0.0 ? t : pow(2.0, 10.0 * (t - 1.0));\n}\n\nfloat exponentialOut(float t) {\n  return t == 1.0 ? t : 1.0 - pow(2.0, -10.0 * t);\n}\n\nfloat linear(float t) {\n  return t;\n}\n\nfloat quadraticInOut(float t) {\n  float p = 2.0 * t * t;\n  return t < 0.5 ? p : -p + (4.0 * t) - 1.0;\n}\n\nfloat quadraticIn(float t) {\n  return t * t;\n}\n\nfloat quadraticOut(float t) {\n  return -t * (t - 2.0);\n}\n\nfloat quarticInOut(float t) {\n  return t < 0.5\n    ? +8.0 * pow(t, 4.0)\n    : -8.0 * pow(t - 1.0, 4.0) + 1.0;\n}\n\nfloat quarticIn(float t) {\n  return pow(t, 4.0);\n}\n\nfloat quarticOut(float t) {\n  return pow(t - 1.0, 3.0) * (1.0 - t) + 1.0;\n}\n\nfloat qinticInOut(float t) {\n  return t < 0.5\n    ? +16.0 * pow(t, 5.0)\n    : -0.5 * pow(2.0 * t - 2.0, 5.0) + 1.0;\n}\n\nfloat qinticIn(float t) {\n  return pow(t, 5.0);\n}\n\nfloat qinticOut(float t) {\n  return 1.0 - (pow(t - 1.0, 5.0));\n}\n\n#ifndef PI\n#define PI 3.141592653589793\n#endif\n\nfloat sineInOut(float t) {\n  return -0.5 * (cos(PI * t) - 1.0);\n}\n\n#ifndef HALF_PI\n#define HALF_PI 1.5707963267948966\n#endif\n\nfloat sineIn(float t) {\n  return sin((t - 1.0) * HALF_PI) + 1.0;\n}\n\n#ifndef HALF_PI\n#define HALF_PI 1.5707963267948966\n#endif\n\nfloat sineOut(float t) {\n  return sin(t * HALF_PI);\n}\n\n";
+
+var nameMap = [
+  ['quad-', 'quadratic-'],
+  ['circ-', 'circular-'],
+  ['expo-', 'exponential-'],
+  ['quart-', 'quartic-'],
+  ['quint-', 'quintic-']
+];
+
+var getEasingName = function (name) {
+  return camelCase(name);
+};
+
+var getGLSLEasingName = function (name) {
+  nameMap.forEach(function (r) {
+    name = name.replace(r[0], r[1]);
+  });
+  return camelCase(name);
+};
+
+var getEasingFunction = function (name) {
+  return eases[camelCase(name)];
+};
+
+var getShaderEasings = function (name) {
+  return glslEasings;
+};
+
+module.exports = {
+  getEasingFunction: getEasingFunction,
+  getEasingName: getEasingName,
+  getShaderEasings: getShaderEasings,
+  getGLSLEasingName: getGLSLEasingName
+};
+
+},{"camelcase":3,"eases":22}],72:[function(require,module,exports){
+var strip = require('strip-comments');
+var lerp = require('lerp');
+var easings = require('./easings');
+
+var namespace = '_rtb';
+
+var getPreviousName = function (name, type) {
+  return namespace + '_' + type + '_previous_' + name;
+};
+
+var getCurrentName = function (name, type) {
+  return namespace + '_' + type + '_current_' + name;
+};
+
+var getNextName = function (name, type) {
+  return namespace + '_' + type + '_next_' + name;
+};
+
+var getTimeName = function (name, type) {
+  return namespace + '_' + type + '_t_' + name;
+};
+
+var transformShader = function (name, shader, type, ease) {
+  //
+  // [X] Strip comments
+  // [X] Replace declaration with prev / next / current declarations
+  // [X] Initialize timestamp
+  // [X] Initialize current in the main() function
+  // [X] Replace all old usages with current
+  //
+
+  var easingName = easings.getGLSLEasingName(ease);
+  var glslEasings = easings.getShaderEasings();
+
+  shader = strip(shader);
+  var prev = getPreviousName(name, type);
+  var next = getNextName(name, type);
+  var current = getCurrentName(name, type);
+  var t = getTimeName(name, type);
+
+  // first occurence of name:
+  var re = new RegExp(';([^;]*' + name + '[^;]*;)');
+  var found = shader.match(re);
+
+  if (!found || found.length < 2) {
+    return shader;
+  }
+
+  var invocation = found[1];
+  var prevDeclare = invocation.replace(name, prev);
+  var nextDeclare = invocation.replace(name, next);
+  var currentDeclare = '\n' + invocation.replace(name, current).replace('attribute', '').replace('uniform', '').trim();
+  var timeDeclare = '\nuniform float ' + t + ';';
+
+  var replaceString = prevDeclare + nextDeclare + currentDeclare + timeDeclare;
+
+  shader = shader.replace(invocation, replaceString);
+
+  // add the mix() call
+  re = new RegExp('main\\s*\\(\\s*\\)\\s*{');
+  found = shader.match(re);
+
+  if (found && found.length) {
+    var mixString = current + ' = ' + 'mix(' + prev + ', ' + next + ', ' + easingName + '(' + t + '));';
+    shader = shader.replace(found[0], found[0] + '\n  ' + mixString);
+  }
+
+  // replace all the old names
+  re = new RegExp('\\b' + name + '\\b', 'g');
+  shader = shader.replace(re, current);
+  shader = glslEasings + '\n' + shader;
+
+  return shader;
+};
+
+var TweenBuffer = function (data, options) {
+  this.data = data;
+  this.previousData = data;
+  this.options = Object.assign({}, {
+    duration: 750,
+    ease: 'quad-in-out'
+  }, options || {});
+};
+
+module.exports = function (regl) {
+  var tween = function (commandObject) {
+    commandObject.uniforms = commandObject.uniforms || {};
+    commandObject.attributes = commandObject.attributes || {};
+    commandObject.vert = commandObject.vert || '';
+    commandObject.frag = commandObject.frag || '';
+    if (!commandObject.vert || !commandObject.frag) {
+      throw new Error('Must provide vert and frag shaders!');
+    }
+
+    var tweenedProps = {
+      uniforms: [],
+      attributes: []
+    };
+    var buffers = {
+      uniforms: {},
+      attributes: {}
+    };
+    var tweenBuffers = {
+      uniforms: {},
+      attributes: {}
+    };
+    var timers = {
+      uniforms: {},
+      attributes: {}
+    };
+    var tweenFlags = {
+      uniforms: {},
+      attributes: {}
+    };
+    var startTimes = {
+      uniforms: {},
+      attributes: {}
+    };
+
+    var tweenBufferUpdate = function (data) {
+      var timer = timers[this.type][this.key];
+
+      if (timer < 1.0) {
+        var eased = easings.getEasingFunction(this.options.ease)(timer);
+        var previousData = this.previousData;
+        this.previousData = this.data.map(function (d, i) {
+          return d.map(function (elt, j) {
+            return lerp(previousData[i][j], elt, eased);
+          });
+        });
+      } else {
+        this.previousData = this.data;
+      }
+
+      this.data = data;
+      buffers[this.type][this.key].previous({
+        usage: 'dynamic',
+        data: this.previousData
+      });
+
+      buffers[this.type][this.key].next({
+        usage: 'dynamic',
+        data: data
+      });
+      tweenFlags[this.type][this.key] = true;
+    };
+
+    var initialize = function (type) {
+      Object.keys(commandObject[type] || {}).filter(function (key) {
+        return commandObject[type][key] instanceof TweenBuffer;
+      }).map(function (key) {
+        tweenedProps[type].push(key);
+        var tweenBuffer = commandObject[type][key];
+        tweenBuffer.type = type;
+        tweenBuffer.key = key;
+        tweenBuffer.update = tweenBufferUpdate;
+        tweenBuffers[type][key] = tweenBuffer;
+        timers[type][key] = 1.0;
+        tweenFlags[type][key] = false;
+        buffers[type][key] = {
+          previous: regl.buffer({
+            usage: 'dynamic',
+            data: tweenBuffer.data
+          }),
+          next: regl.buffer({
+            usage: 'dynamic',
+            data: tweenBuffer.data
+          })
+        };
+      });
+    };
+
+    initialize('attributes');
+    initialize('uniforms');
+
+    var transform = function (type) {
+      tweenedProps[type].forEach(function (attr) {
+        var tweenBuffer = tweenBuffers[type][attr];
+        var duration = tweenBuffer.options.duration;
+        commandObject.vert = transformShader(attr, commandObject.vert || '', type, tweenBuffer.options.ease);
+        delete commandObject.attributes[attr];
+        commandObject[type][getPreviousName(attr, type)] = buffers[type][attr].previous;
+        commandObject[type][getNextName(attr, type)] = buffers[type][attr].next;
+        commandObject.uniforms[getTimeName(attr, type)] = function (context, props, batchId) {
+          if (tweenFlags[type][attr]) {
+            timers[type][attr] = 0.0;
+            startTimes[type][attr] = context.time;
+          }
+
+          // we go up to maxT to allow for some random delays
+          var startTime = startTimes[type][attr];
+          var t = timers[type][attr];
+          if (t < 1.0) {
+            t = Math.min(1.0, 1000 * (context.time - startTime) / duration);
+          }
+
+          timers[type][attr] = t;
+          tweenFlags[type][attr] = false;
+          return t;
+        };
+      });
+    };
+
+    transform('attributes');
+    transform('uniforms');
+
+    return regl(commandObject);
+  };
+
+  tween.buffer = function (data, options) {
+    return new TweenBuffer(data, options);
+  };
+
+  return tween;
+};
+
+},{"./easings":71,"lerp":36,"strip-comments":70}]},{},[1]);
