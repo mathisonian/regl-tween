@@ -1,7 +1,7 @@
 
 # regl-tween
 
-A helper module that wraps regl buffers and automatically provides interpolation.
+A helper module that wraps [regl](https://github.com/mikolalysenko/regl/) buffers and automatically provides interpolation.
 
 ### Why?
 
