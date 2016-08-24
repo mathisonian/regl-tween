@@ -1,8 +1,7 @@
 
 var camelCase = require('camelcase');
 var eases = require('eases');
-var glslify = require('glslify');
-var glslEasings = glslify('./easings.glsl');
+var glslEasings = require('./compiled-easings');
 
 var nameMap = [
   ['quad-', 'quadratic-'],
