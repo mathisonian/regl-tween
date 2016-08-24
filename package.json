@@ -2,7 +2,7 @@
   "name": "regl-tween",
   "version": "1.1.1",
   "description": "Automatically tween buffer data in regl",
-  "main": "build/index.js",
+  "main": "index.js",
   "scripts": {
     "test": "semistandard && mocha",
     "example": "budo example/lots-of-points"
