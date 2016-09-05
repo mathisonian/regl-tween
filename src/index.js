@@ -84,6 +84,10 @@ var TweenBuffer = function (data, options) {
 
 module.exports = function (regl) {
   var tween = function (commandObject) {
+    return regl(this._initialize(commandObject));
+  };
+
+  tween._initialize = function (commandObject) {
     commandObject.uniforms = commandObject.uniforms || {};
     commandObject.attributes = commandObject.attributes || {};
     commandObject.vert = commandObject.vert || '';
@@ -177,7 +181,7 @@ module.exports = function (regl) {
       tweenedProps[type].forEach(function (attr) {
         var tweenBuffer = tweenBuffers[type][attr];
         var duration = tweenBuffer.options.duration;
-        commandObject.vert = transformShader(attr, commandObject.vert || '', type, tweenBuffer.options.ease);
+        commandObject.vert = transformShader(attr, commandObject.vert, type, tweenBuffer.options.ease);
         delete commandObject.attributes[attr];
         commandObject[type][getPreviousName(attr, type)] = buffers[type][attr].previous;
         commandObject[type][getNextName(attr, type)] = buffers[type][attr].next;
@@ -187,7 +191,6 @@ module.exports = function (regl) {
             startTimes[type][attr] = context.time;
           }
 
-          // we go up to maxT to allow for some random delays
           var startTime = startTimes[type][attr];
           var t = timers[type][attr];
           if (t < 1.0) {
@@ -204,7 +207,7 @@ module.exports = function (regl) {
     transform('attributes');
     transform('uniforms');
 
-    return regl(commandObject);
+    return commandObject;
   };
 
   tween.buffer = function (data, options) {
