@@ -6,7 +6,7 @@ A helper module that wraps [regl](https://github.com/mikolalysenko/regl/) buffer
 ### Why?
 
 This automatically computes tweened values in the shader so it's much faster than
-doing it in the main javascript thread. See it running with 1.25 million points: https://mathisonian.github.io/regl-tween/
+doing it in the main javascript thread. See it running with a quarter of a million points: https://mathisonian.github.io/regl-tween/
 
 ## installation
 
