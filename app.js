@@ -2,7 +2,7 @@
 var regl = require('regl')();
 var tween = require('..')(regl);
 
-var COUNT = 1250000;
+var COUNT = 250000;
 
 var count = 0;
 var getRandomPositions = function (n) {
