@@ -29,19 +29,19 @@
   },
   "homepage": "https://github.com/mathisonian/regl-tween#readme",
   "devDependencies": {
-    "budo": "^9.0.0",
-    "expect": "^1.20.2",
-    "gl": "^4.0.2",
-    "glslify": "^5.1.0",
-    "mocha": "^3.0.2",
-    "regl": "^1.0.0",
-    "semistandard": "^8.0.0"
+    "budo": "^11.8.4",
+    "expect": "^29.6.4",
+    "gl": "^6.0.2",
+    "glslify": "^7.1.1",
+    "mocha": "^10.2.0",
+    "regl": "^2.1.0",
+    "semistandard": "^17.0.0"
   },
   "dependencies": {
-    "camelcase": "^3.0.0",
+    "camelcase": "^8.0.0",
     "eases": "^1.0.8",
     "glsl-easings": "^1.0.0",
     "lerp": "^1.0.3",
-    "strip-comments": "^0.3.4"
+    "strip-comments": "^2.0.1"
   }
 }
