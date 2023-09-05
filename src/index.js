@@ -76,10 +76,11 @@ var transformShader = function (name, shader, type, ease) {
 var TweenBuffer = function (data, options) {
   this.data = data;
   this.previousData = data;
-  this.options = Object.assign({}, {
+  this.defaultOptions = Object.assign({}, {
     duration: 750,
     ease: 'quad-in-out'
   }, options || {});
+  this.options = {...this.defaultOptions};
 };
 
 module.exports = function (regl) {
@@ -117,8 +118,10 @@ module.exports = function (regl) {
       attributes: {}
     };
 
-    var tweenBufferUpdate = function (data) {
+    var tweenBufferUpdate = function (data, options = null) {
       var timer = timers[this.type][this.key];
+
+      if (options) this.options = Object.assign({}, this.defaultOptions, options);
 
       if (timer < 1.0) {
         var eased = easings.getEasingFunction(this.options.ease)(timer);
@@ -176,7 +179,6 @@ module.exports = function (regl) {
     var transform = function (type) {
       tweenedProps[type].forEach(function (attr) {
         var tweenBuffer = tweenBuffers[type][attr];
-        var duration = tweenBuffer.options.duration;
         commandObject.vert = transformShader(attr, commandObject.vert || '', type, tweenBuffer.options.ease);
         delete commandObject.attributes[attr];
         commandObject[type][getPreviousName(attr, type)] = buffers[type][attr].previous;
@@ -191,7 +193,7 @@ module.exports = function (regl) {
           var startTime = startTimes[type][attr];
           var t = timers[type][attr];
           if (t < 1.0) {
-            t = Math.min(1.0, 1000 * (context.time - startTime) / duration);
+            t = Math.min(1.0, 1000 * (context.time - startTime) / tweenBuffer.options.duration);
           }
 
           timers[type][attr] = t;
